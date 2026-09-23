@@ -8,7 +8,7 @@
 - Apples
 - Bananas
 - Oranges
-- * **This is a bold bullet point**
+* **This is a bold bullet point**
 * *This is an italic bullet point*
 * ***This bullet point is both bold and italic***
 * Normal text with a **bold** word and an *italic* word.
