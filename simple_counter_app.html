@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Counter App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 0.2s cubic-bezier(0.4, 0, 0.6, 1)',
+                        'pop': 'pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                    },
+                    keyframes: {
+                        pop: {
+                            '0%': { transform: 'scale(0.92)' },
+                            '50%': { transform: 'scale(1.06)' },
+                            '100%': { transform: 'scale(1)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for history log */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.3);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.5);
+        }
+        
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .counter-glow-positive {
+            text-shadow: 0 0 35px rgba(16, 185, 129, 0.35);
+        }
+        .counter-glow-negative {
+            text-shadow: 0 0 35px rgba(244, 63, 94, 0.35);
+        }
+        .counter-glow-neutral {
+            text-shadow: 0 0 35px rgba(99, 102, 241, 0.35);
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-900 text-slate-100 font-sans antialiased flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+    <!-- Top Header -->
+    <header class="w-full max-w-4xl mx-auto px-4 py-6 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="p-2.5 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-2xl shadow-lg shadow-indigo-500/10">
+                <i data-lucide="calculator" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                    Counter
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300">v2.0</span>
+                </h1>
+                <p class="text-xs text-slate-400">Minimalist & feature-rich counter</p>
+            </div>
+        </div>
+
+        <!-- Header Action Buttons -->
+        <div class="flex items-center space-x-2">
+            <!-- Sound Toggle Button -->
+            <button id="soundToggleBtn" onclick="toggleSound()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all duration-200" title="Toggle Sound (M)">
+                <i id="soundIcon" data-lucide="volume-2" class="w-5 h-5"></i>
+            </button>
+            <!-- Target Goal Toggle -->
+            <button id="goalModalBtn" onclick="toggleGoalModal()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all duration-200" title="Set Goal Target">
+                <i data-lucide="target" class="w-5 h-5"></i>
+            </button>
+            <!-- Reset Button -->
+            <button onclick="resetCounter()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-slate-300 hover:text-rose-400 border border-slate-700 hover:border-rose-500/40 transition-all duration-200" title="Reset Counter (R)">
+                <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="w-full max-w-4xl mx-auto px-4 py-2 flex-1 flex flex-col justify-center items-center gap-6">
+        
+        <!-- Target Progress Bar (Optional dynamic element) -->
+        <div id="goalContainer" class="w-full max-w-md bg-slate-800/80 backdrop-blur border border-slate-700/80 rounded-2xl p-4 hidden transition-all duration-300">
+            <div class="flex justify-between items-center text-xs font-semibold text-slate-300 mb-2">
+                <span class="flex items-center gap-1.5"><i data-lucide="target" class="w-4 h-4 text-indigo-400"></i> Target Progress</span>
+                <span id="goalText" class="font-mono text-indigo-400">0 / 100</span>
+            </div>
+            <div class="w-full bg-slate-700/60 rounded-full h-2.5 overflow-hidden">
+                <div id="goalProgressBar" class="bg-gradient-to-r from-indigo-500 to-emerald-400 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Counter Primary Display Box -->
+        <div class="w-full max-w-md bg-slate-800/60 backdrop-blur-xl border border-slate-700/60 rounded-3xl p-8 shadow-2xl flex flex-col items-center relative overflow-hidden group">
+            
+            <!-- Glow Effect Canvas Background -->
+            <div id="glowBg" class="absolute inset-0 bg-indigo-500/5 transition-colors duration-500 pointer-events-none"></div>
+
+            <!-- Number Label Header -->
+            <span class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 no-select flex items-center gap-2">
+                Current Value
+            </span>
+
+            <!-- Large Number Display -->
+            <div id="counterDisplay" class="font-mono text-7xl sm:text-8xl font-bold tracking-tight my-4 no-select counter-glow-neutral text-indigo-400 transition-all duration-200">
+                0
+            </div>
+
+            <!-- Quick Action Step Controls (Main Inc / Dec Buttons) -->
+            <div class="w-full grid grid-cols-2 gap-4 mt-6">
+                <button onclick="decrement()" class="no-select active:scale-95 transition-all duration-150 py-5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-rose-400 font-bold text-3xl flex items-center justify-center shadow-lg group-hover:shadow-rose-500/5">
+                    <i data-lucide="minus" class="w-8 h-8 stroke-[3]"></i>
+                </button>
+                <button onclick="increment()" class="no-select active:scale-95 transition-all duration-150 py-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-3xl flex items-center justify-center shadow-lg shadow-indigo-600/25">
+                    <i data-lucide="plus" class="w-8 h-8 stroke-[3]"></i>
+                </button>
+            </div>
+
+            <!-- Step Size Presets Selector -->
+            <div class="w-full mt-6 pt-6 border-t border-slate-700/50">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-semibold text-slate-400">Step Amount</span>
+                    <span id="stepLabel" class="text-xs font-mono text-indigo-400 font-semibold">1</span>
+                </div>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setStep(1)" class="step-btn py-2 px-3 rounded-xl bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 text-xs font-semibold hover:bg-indigo-600/30 transition-all" data-step="1">1</button>
+                    <button onclick="setStep(5)" class="step-btn py-2 px-3 rounded-xl bg-slate-800 text-slate-400 border border-slate-700/60 text-xs font-semibold hover:bg-slate-700 hover:text-slate-200 transition-all" data-step="5">5</button>
+                    <button onclick="setStep(10)" class="step-btn py-2 px-3 rounded-xl bg-slate-800 text-slate-400 border border-slate-700/60 text-xs font-semibold hover:bg-slate-700 hover:text-slate-200 transition-all" data-step="10">10</button>
+                    <button onclick="setStep(100)" class="step-btn py-2 px-3 rounded-xl bg-slate-800 text-slate-400 border border-slate-700/60 text-xs font-semibold hover:bg-slate-700 hover:text-slate-200 transition-all" data-step="100">100</button>
+                </div>
+            </div>
+
+            <!-- Quick Action Row (Undo & Custom Set) -->
+            <div class="w-full grid grid-cols-2 gap-2 mt-4">
+                <button onclick="undo()" id="undoBtn" disabled class="py-2.5 px-4 rounded-xl bg-slate-800/80 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed border border-slate-700/60 text-xs font-medium text-slate-300 flex items-center justify-center gap-1.5 transition-all">
+                    <i data-lucide="undo-2" class="w-3.5 h-3.5"></i> Undo
+                </button>
+                <button onclick="promptSetValue()" class="py-2.5 px-4 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700/60 text-xs font-medium text-slate-300 flex items-center justify-center gap-1.5 transition-all">
+                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Set Custom
+                </button>
+            </div>
+        </div>
+
+        <!-- Analytics & History Cards Container -->
+        <div class="w-full max-w-md grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Summary Stats Card -->
+            <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 flex flex-col justify-between">
+                <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                    <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-400"></i> Total Taps
+                </span>
+                <div class="mt-2 flex items-baseline justify-between">
+                    <span id="totalClicksDisplay" class="font-mono text-2xl font-bold text-white">0</span>
+                    <span id="sessionTime" class="text-xs text-slate-500 font-mono">0s</span>
+                </div>
+            </div>
+
+            <!-- Min/Max Record Card -->
+            <div class="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4 flex flex-col justify-between">
+                <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                    <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i> Range Peak
+                </span>
+                <div class="mt-2 flex items-center justify-between font-mono text-xs text-slate-300">
+                    <div>Min: <span id="minValDisplay" class="font-bold text-rose-400">0</span></div>
+                    <div>Max: <span id="maxValDisplay" class="font-bold text-emerald-400">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity History Log Drawer -->
+        <div class="w-full max-w-md bg-slate-800/40 border border-slate-700/50 rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                    <i data-lucide="history" class="w-4 h-4 text-slate-400"></i> Recent Activity Log
+                </span>
+                <button onclick="clearHistory()" class="text-[11px] font-semibold text-slate-500 hover:text-slate-300 transition-colors">Clear</button>
+            </div>
+            <div id="historyList" class="space-y-2 max-h-32 overflow-y-auto pr-1 text-xs font-mono">
+                <div id="emptyHistoryText" class="text-slate-500 italic text-center py-4">No recent activity</div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Goal Modal Overlay -->
+    <div id="goalModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-6 w-full max-w-sm shadow-2xl transform scale-95 transition-transform duration-200" id="goalModalCard">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i data-lucide="target" class="w-5 h-5 text-indigo-400"></i> Set Target Goal
+                </h3>
+                <button onclick="toggleGoalModal()" class="text-slate-400 hover:text-white p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-400 mb-4">Track your progress towards a target number with a visual progress bar.</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Target Number</label>
+                    <input type="number" id="goalInput" value="100" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="saveGoal()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-xl text-xs transition-colors">Apply Goal</button>
+                    <button onclick="removeGoal()" class="bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 font-semibold px-4 py-2 rounded-xl text-xs border border-rose-500/30 transition-colors">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Guidance Footer -->
+    <footer class="w-full max-w-4xl mx-auto px-4 py-4 text-center">
+        <div class="inline-flex flex-wrap items-center justify-center gap-3 text-xs text-slate-500 bg-slate-800/30 px-4 py-2 rounded-2xl border border-slate-800">
+            <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 text-[10px] bg-slate-800 border border-slate-700 rounded text-slate-300">Space</kbd> or <kbd class="px-1.5 py-0.5 text-[10px] bg-slate-800 border border-slate-700 rounded text-slate-300">↑</kbd> +1</span>
+            <span class="text-slate-700">•</span>
+            <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 text-[10px] bg-slate-800 border border-slate-700 rounded text-slate-300">↓</kbd> -1</span>
+            <span class="text-slate-700">•</span>
+            <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 text-[10px] bg-slate-800 border border-slate-700 rounded text-slate-300">R</kbd> Reset</span>
+            <span class="text-slate-700">•</span>
+            <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 text-[10px] bg-slate-800 border border-slate-700 rounded text-slate-300">Z</kbd> Undo</span>
+        </div>
+    </footer>
+
+    <script>
+        // State variables
+        let count = 0;
+        let step = 1;
+        let totalClicks = 0;
+        let minVal = 0;
+        let maxVal = 0;
+        let historyStack = [];
+        let activityLogs = [];
+        let soundEnabled = true;
+        let targetGoal = null;
+        let startTime = Date.now();
+
+        // Audio Context Synthesizer (No external audio files needed)
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    audioCtx = new AudioContext();
+                }
+            }
+        }
+
+        function playBeep(freq = 440, type = 'sine', duration = 0.08) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                if (!audioCtx) return;
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {
+                console.error("Audio error:", e);
+            }
+        }
+
+        function updateDisplay(animate = true) {
+            const displayEl = document.getElementById('counterDisplay');
+            const glowBg = document.getElementById('glowBg');
+            
+            displayEl.textContent = count.toLocaleString();
+
+            // Dynamic glow & color styling
+            displayEl.classList.remove('counter-glow-positive', 'counter-glow-negative', 'counter-glow-neutral', 'text-emerald-400', 'text-rose-400', 'text-indigo-400');
+            glowBg.classList.remove('bg-emerald-500/10', 'bg-rose-500/10', 'bg-indigo-500/5');
+
+            if (count > 0) {
+                displayEl.classList.add('counter-glow-positive', 'text-emerald-400');
+                glowBg.classList.add('bg-emerald-500/10');
+            } else if (count < 0) {
+                displayEl.classList.add('counter-glow-negative', 'text-rose-400');
+                glowBg.classList.add('bg-rose-500/10');
+            } else {
+                displayEl.classList.add('counter-glow-neutral', 'text-indigo-400');
+                glowBg.classList.add('bg-indigo-500/5');
+            }
+
+            // Animation trigger
+            if (animate) {
+                displayEl.classList.remove('animate-pop');
+                void displayEl.offsetWidth; // Trigger reflow
+                displayEl.classList.add('animate-pop');
+            }
+
+            // Min/Max range tracking
+            if (count < minVal) minVal = count;
+            if (count > maxVal) maxVal = count;
+            document.getElementById('minValDisplay').textContent = minVal.toLocaleString();
+            document.getElementById('maxValDisplay').textContent = maxVal.toLocaleString();
+
+            // Total clicks
+            document.getElementById('totalClicksDisplay').textContent = totalClicks.toLocaleString();
+
+            // Undo button state
+            document.getElementById('undoBtn').disabled = historyStack.length === 0;
+
+            // Goal progress bar update
+            updateGoalProgress();
+        }
+
+        function increment() {
+            historyStack.push(count);
+            count += step;
+            totalClicks++;
+            addLog(`+${step}`, count);
+            playBeep(520 + Math.min(count * 2, 400), 'sine', 0.07);
+            updateDisplay();
+        }
+
+        function decrement() {
+            historyStack.push(count);
+            count -= step;
+            totalClicks++;
+            addLog(`-${step}`, count);
+            playBeep(340 + Math.max(count * 2, -150), 'triangle', 0.07);
+            updateDisplay();
+        }
+
+        function setStep(newStep) {
+            step = Math.max(1, parseInt(newStep) || 1);
+            document.getElementById('stepLabel').textContent = step;
+            
+            // Highlight active button
+            document.querySelectorAll('.step-btn').forEach(btn => {
+                const btnStep = parseInt(btn.getAttribute('data-step'));
+                if (btnStep === step) {
+                    btn.className = "step-btn py-2 px-3 rounded-xl bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 text-xs font-semibold transition-all";
+                } else {
+                    btn.className = "step-btn py-2 px-3 rounded-xl bg-slate-800 text-slate-400 border border-slate-700/60 text-xs font-semibold hover:bg-slate-700 hover:text-slate-200 transition-all";
+                }
+            });
+            playBeep(400, 'sine', 0.04);
+        }
+
+        function undo() {
+            if (historyStack.length === 0) return;
+            count = historyStack.pop();
+            addLog('Undo', count);
+            playBeep(280, 'square', 0.06);
+            updateDisplay();
+        }
+
+        function resetCounter() {
+            if (count === 0 && historyStack.length === 0) return;
+            historyStack.push(count);
+            count = 0;
+            addLog('Reset', 0);
+            playBeep(200, 'sawtooth', 0.12);
+            updateDisplay();
+        }
+
+        function promptSetValue() {
+            const input = prompt("Enter a new counter value:", count);
+            if (input !== null && !isNaN(parseInt(input))) {
+                historyStack.push(count);
+                count = parseInt(input);
+                addLog('Set Value', count);
+                playBeep(450, 'sine', 0.08);
+                updateDisplay();
+            }
+        }
+
+        function addLog(action, result) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            activityLogs.unshift({ action, result, time: timeStr });
+            if (activityLogs.length > 20) activityLogs.pop();
+            
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const listEl = document.getElementById('historyList');
+            if (activityLogs.length === 0) {
+                listEl.innerHTML = `<div class="text-slate-500 italic text-center py-4">No recent activity</div>`;
+                return;
+            }
+
+            listEl.innerHTML = activityLogs.map(log => `
+                <div class="flex items-center justify-between py-1 px-2.5 rounded-lg bg-slate-800/60 border border-slate-700/40">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold ${log.action.startsWith('+') ? 'text-emerald-400' : log.action.startsWith('-') ? 'text-rose-400' : 'text-indigo-400'}">${log.action}</span>
+                        <span class="text-slate-500">→</span>
+                        <span class="text-slate-200 font-semibold">${log.result}</span>
+                    </div>
+                    <span class="text-[10px] text-slate-500">${log.time}</span>
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            activityLogs = [];
+            renderHistory();
+        }
+
+        function toggleGoalModal() {
+            const modal = document.getElementById('goalModal');
+            const card = document.getElementById('goalModalCard');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    card.classList.remove('scale-95');
+                }, 10);
+            } else {
+                modal.classList.add('opacity-0');
+                card.classList.add('scale-95');
+                setTimeout(() => modal.classList.add('hidden'), 200);
+            }
+        }
+
+        function saveGoal() {
+            const val = parseInt(document.getElementById('goalInput').value);
+            if (!isNaN(val) && val > 0) {
+                targetGoal = val;
+                document.getElementById('goalContainer').classList.remove('hidden');
+                updateGoalProgress();
+                toggleGoalModal();
+                playBeep(600, 'sine', 0.1);
+            }
+        }
+
+        function removeGoal() {
+            targetGoal = null;
+            document.getElementById('goalContainer').classList.add('hidden');
+            toggleGoalModal();
+        }
+
+        function updateGoalProgress() {
+            if (targetGoal === null) return;
+            const percentage = Math.min(100, Math.max(0, (count / targetGoal) * 100));
+            document.getElementById('goalText').textContent = `${count} / ${targetGoal}`;
+            document.getElementById('goalProgressBar').style.width = `${percentage}%`;
+            
+            if (count >= targetGoal) {
+                document.getElementById('goalText').className = "font-mono text-emerald-400 font-bold flex items-center gap-1";
+                document.getElementById('goalText').innerHTML = `${count} / ${targetGoal} 🎉`;
+            } else {
+                document.getElementById('goalText').className = "font-mono text-indigo-400";
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundIcon');
+            const btn = document.getElementById('soundToggleBtn');
+            
+            if (soundEnabled) {
+                icon.setAttribute('data-lucide', 'volume-2');
+                btn.classList.remove('text-slate-500');
+                playBeep(440, 'sine', 0.05);
+            } else {
+                icon.setAttribute('data-lucide', 'volume-x');
+                btn.classList.add('text-slate-500');
+            }
+            lucide.createIcons();
+        }
+
+        // Session timer calculation
+        setInterval(() => {
+            const seconds = Math.floor((Date.now() - startTime) / 1000);
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            document.getElementById('sessionTime').textContent = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+        }, 1000);
+
+        window.addEventListener('keydown', (e) => {
+            // Prevent shortcut activation if modal input is focused
+            if (document.activeElement.tagName === 'INPUT') return;
+
+            switch (e.key) {
+                case 'ArrowUp':
+                case ' ':
+                    e.preventDefault();
+                    increment();
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    decrement();
+                    break;
+                case 'r':
+                case 'R':
+                    resetCounter();
+                    break;
+                case 'z':
+                case 'Z':
+                    if (e.ctrlKey || e.metaKey || !e.ctrlKey) undo();
+                    break;
+                case 'm':
+                case 'M':
+                    toggleSound();
+                    break;
+            }
+        });
+
+        // Initialize icons on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            updateDisplay(false);
+        });
+    </script>
+</body>
+</html>
